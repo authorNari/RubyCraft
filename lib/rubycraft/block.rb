@@ -1,10 +1,10 @@
 require 'rubycraft/block_type'
 
 module RubyCraft
-  # A minecraft block. Its position is given by a coord[x, z, y]
+  # A minecraft block. Its position is given by a coord[y, z, x]
   class Block
 
-    attr_accessor :block_type, :pos, :data
+    attr_accessor :blockType, :pos, :data
     def initialize(blockType, data = 0)
       @blockType = blockType
       @data = 0
@@ -64,7 +64,7 @@ module RubyCraft
     end
 
     def y
-      pos[2]
+      pos[0]
     end
 
     def z
@@ -72,7 +72,7 @@ module RubyCraft
     end
 
     def x
-      pos[0]
+      pos[2]
     end
   end
 end

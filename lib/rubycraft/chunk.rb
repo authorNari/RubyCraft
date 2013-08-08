@@ -2,7 +2,7 @@
 require 'rubycraft/nbt_helper'
 require 'rubycraft/byte_converter'
 require 'rubycraft/block'
-require 'rubycraft/matrix3d'
+require 'rubycraft/section'
 
 module RubyCraft
   # Chunks are enumerable over blocks
@@ -12,7 +12,7 @@ module RubyCraft
 
     Width = 16
     Length = 16
-    Height = 128
+    Height = 256
 
     def self.fromNbt(bytes)
       new NbtHelper.fromNbt bytes
@@ -20,25 +20,15 @@ module RubyCraft
 
     def initialize(nbtData)
       name, @nbtBody = nbtData
-      bytes = level["Blocks"].value.bytes
-      @blocks = matrixfromBytes bytes
-      @blocks.each_triple_index do |b, z, x, y|
-        b.pos = [z, x, y]
-      end
-      data = level["Data"].value.bytes.to_a
-      @blocks.each_with_index do |b, index|
-        v = data[index / 2]
-        if index % 2 == 0
-          b.data = v & 0xF
-        else
-          b.data = v >> 4
-        end
+      @sections = []
+      level["Sections"].map do |sec|
+        @sections[sec["Y"].value] = Section.new(sec)
       end
     end
 
     # Iterates over the blocks
     def each(&block)
-      @blocks.each &block
+      @sections.each{|sec| sec.each(&block) if not sec.nil? }
     end
 
 
@@ -55,17 +45,27 @@ module RubyCraft
     end
 
     def [](z, x, y)
-      @blocks[z, x, y]
+      sec_y = sec_y(y)
+      if sec = @sections[sec_y]
+        sec[y, z, x]
+      else
+        nil
+      end
     end
 
     def []=(z, x, y, value)
-      @blocks[z, x, y] = value
+      sec_y = sec_y(y)
+      if sec = @sections[sec_y]
+        sec[y, z, x] = value
+      else
+        nil
+      end
     end
 
     def export
-      level["Data"] = byteArray exportLevelData
-      level["Blocks"] = byteArray @blocks.map { |b| b.id }
-      level["HeightMap"] = byteArray exportHeightMap
+      secs = @sections.map{|sec| sec.export if not sec.nil? }
+      level["Sections"] = NBTFile::Types::List.new(NBTFile::Types::Compound, secs)
+      level["HeightMap"] = exportHeightMap
       ["", @nbtBody]
     end
 
@@ -75,46 +75,23 @@ module RubyCraft
 
     protected
     def exportHeightMap
-      zwidth, xwidth, ywidth = @blocks.bounds
-      matrix = Array.new(zwidth) { Array.new(xwidth) { 1 }}
-      @blocks.each_triple_index do |b, z, x, y|
+      height_map = level["HeightMap"].values.map(&:value)
+      xwidth = Width
+      each do |b|
         unless b.transparent
-          matrix[z][x] = [matrix[z][x], y + 1].max
+          y, z, x = b.pos
+          height_map[z*xwidth + x] = [height_map[z*xwidth + x], y+1].max
         end
       end
-      ret = []
-      matrix.each do |line|
-        line.each do |height|
-          ret << height
-        end
-      end
-      ret
+      return NBTFile::Types::IntArray.new(height_map)
     end
 
     def level
       @nbtBody["Level"]
     end
 
-    def exportLevelData
-      data = []
-      @blocks.each_with_index do |b, i|
-        if i % 2 == 0
-          data << b.data
-        else
-          data[i / 2] += (b.data << 4)
-        end
-      end
-      data
+    def sec_y(y)
+      y / 16
     end
-
-    def byteArray(data)
-      NBTFile::Types::ByteArray.new ByteConverter.toByteString(data)
-    end
-
-    def matrixfromBytes(bytes)
-      Matrix3d.new(Width, Length, Height).fromArray bytes.map {|byte| Block.get(byte) }
-    end
-
-
   end
 end

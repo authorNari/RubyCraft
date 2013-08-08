@@ -3,18 +3,12 @@ require 'zlib'
 require 'rubycraft/byte_converter'
 # Patching nbtfile clases so that they don't gzip/ungzip incorrectly the zlib bytes from
 #mcr files. Use the methods from ZlibHelper
-class NBTFile::Private::Tokenizer
-  def initialize(io)
-    @gz = io
-    @state = NBTFile::Private::TopTokenizerState.new
-  end
+def NBTFile.tokenize(io, &block)
+  NBTFile.tokenize_uncompressed(io, &block)
 end
 
-class NBTFile::Emitter
-  def initialize(stream)
-    @gz = stream
-    @state = NBTFile::Private::TopEmitterState.new
-  end
+def NBTFile.emit(io, &block) #:yields: emitter
+  emit_uncompressed(io, &block)
 end
 
 module RubyCraft

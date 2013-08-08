@@ -14,15 +14,15 @@ module RubyCraft
       @xlimit = d1
       @ylimit = d2
       @zlimit = d3
-      @data = Array.new(d1) { Array.new(d2) { Array.new(d3) } }
+      @data = Array.new(@xlimit) { Array.new(@ylimit) { Array.new(@zlimit) } }
     end
 
     def [](x, y, z)
-      @data[x][y][z]
+      @data[y][x][z]
     end
 
     def []=(x, y, z, value)
-      @data[x][y][z] = value
+      @data[y][x][z] = value
     end
 
     def put(index, value)
@@ -37,9 +37,9 @@ module RubyCraft
 
     def each(&block)
       for z in @data
-        for y in z
-          for x in y
-            yield x
+        for x in z
+          for y in x
+            yield y
           end
         end
       end
@@ -47,10 +47,10 @@ module RubyCraft
 
     def each_triple_index(&block)
       return enum_for:each_triple_index unless block_given?
-      @data.each_with_index do |plane, x|
-        plane.each_with_index do |column, y|
+      @data.each_with_index do |plane, y|
+        plane.each_with_index do |column, x|
           column.each_with_index do |value, z|
-            yield value, x ,y ,z
+            yield value, y, z, x
           end
         end
       end
@@ -64,24 +64,22 @@ module RubyCraft
 
 
     def to_a(default = nil)
-      map do |x|
-        if x.nil?
+      map do |y|
+        if y.nil?
           default
         else
-          x
+          y
         end
       end
     end
 
     protected
     def indexToArray(index)
-      x = index / (@zlimit * @ylimit)
-      index -= x * (@zlimit * @ylimit)
-      y = index / @zlimit
+      y = index / (@zlimit * @xlimit)
+      index -= y * (@zlimit * @xlimit)
+      x = index / @zlimit
       z = index % @zlimit
       return x, y, z
     end
-
-
   end
 end
