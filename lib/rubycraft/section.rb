@@ -12,8 +12,7 @@ module RubyCraft
     def initialize(section)
       @base_y = section["Y"].value * Height
       @nbt_section = section
-      @blocks = Matrix3d.new(Width, Length, Height).fromArray(
-        section["Blocks"].value.bytes.map{|byte| Block.get(byte) })
+      @blocks = Matrix3d.new(Width, Length, Height).fromArray(blocks_from_nbt(section))
       @blocks.each_triple_index do |b, y, z, x|
         b.pos = [y + @base_y, z, x]
       end
@@ -51,7 +50,16 @@ module RubyCraft
 
     def export
       @nbt_section["Data"] = byte_array(export_level_data)
-      @nbt_section["Blocks"] = byte_array(@blocks.map { |b| b.id })
+      block_ids = @blocks.map(&:id)
+      @nbt_section["Blocks"] = byte_array(block_ids)
+      if block_ids.any?{|id| id > 255}
+        adds = block_ids.map.with_index do |_,i|
+          (i % 2 == 0) ? [block_ids[i], block_ids[i+1]] : nil
+        end.compact.map do |b1, b2|
+          ((b2 >> 8) << 4) + (b1 >> 8)
+        end
+        @nbt_section["Add"] = byte_array(adds)
+      end
       return @nbt_section
     end
 
@@ -70,6 +78,16 @@ module RubyCraft
 
     def byte_array(data)
       NBTFile::Types::ByteArray.new ByteConverter.toByteString(data)
+    end
+
+    def blocks_from_nbt(section)
+      block_bytes = section["Blocks"].value.bytes
+      if section["Add"]
+        add_bytes = section["Add"].value.bytes.map{|b| [b & 15, b >> 4] }.flatten
+        return block_bytes.zip(add_bytes).map{|b, a| Block.get((a << 8) + b) }
+      else
+        return block_bytes.map{|b| Block.get(b) }
+      end
     end
   end
 end
