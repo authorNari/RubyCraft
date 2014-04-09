@@ -14,6 +14,8 @@ module RubyCraft
     Length = 16
     Height = 256
 
+    attr_reader :tile_entities
+
     def self.fromNbt(bytes)
       new NbtHelper.fromNbt bytes
     end
@@ -24,6 +26,7 @@ module RubyCraft
       level["Sections"].map do |sec|
         @sections[sec["Y"].value] = Section.new(sec)
       end
+      @tile_entities = level["TileEntities"]
     end
 
     # Iterates over the blocks

@@ -33,6 +33,9 @@ module RubyCraft
       _getchunk.export
     end
 
+    def tile_entities
+      _getchunk.tile_entities
+    end
 
     def toNbt
       return @bytes if @chunk.nil?
