@@ -13,7 +13,7 @@ module RubyCraft
       @base_y = section["Y"].value * Height
       @nbt_section = section
       @blocks = Matrix3d.new(Width, Length, Height).fromArray(blocks_from_nbt(section))
-      @blocks.each_triple_index do |b, y, z, x|
+      @blocks.each_triple_index do |b, y, x, z|
         b.pos = [y + @base_y, z, x]
       end
       data = section["Data"].value.bytes.to_a
@@ -40,12 +40,12 @@ module RubyCraft
     end
 
     def [](y, z, x)
-      @blocks[x, y - @base_y, z]
+      @blocks[z, y - @base_y, x]
     end
 
     def []=(y, z, x, value)
       value.pos = [y, z, x]
-      @blocks[x, y - @base_y, z] = value
+      @blocks[z, y - @base_y, x] = value
     end
 
     def export
